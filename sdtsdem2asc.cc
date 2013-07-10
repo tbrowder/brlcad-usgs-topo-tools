@@ -151,7 +151,12 @@ main(int argc, char** argv)
   int nb(dataset->GetRasterCount());
   string s(nb > 1 ? "s" : "");
   string isare(nb > 1 ? "are" : "is");
-  Printf("There %s %d raster band%s in this data set.\n")(isare)(nb)(s);
+  Printf("There %s %d raster band%s in this data set.\n"
+         "Fetching data for band 1:\n"
+         )
+    (isare)(nb)(s)
+    ;
+
   band = dataset->GetRasterBand(1);
   band->GetBlockSize(&nBlockXSize, &nBlockYSize);
   printf("Block=%dx%d Type=%s, ColorInterp=%s\n",
