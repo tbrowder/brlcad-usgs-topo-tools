@@ -123,7 +123,7 @@ main(int argc, char** argv)
          dataset->GetRasterCount());
 
   if (dataset->GetProjectionRef())
-    printf("Projection is `%s'\n", dataset->GetProjectionRef());
+    printf("Projection is '%s'\n", dataset->GetProjectionRef());
 
   if (dataset->GetGeoTransform(adfGeoTransform) == CE_None) {
     printf("Origin = (%.6f,%.6f)\n",
@@ -148,20 +148,25 @@ main(int argc, char** argv)
   int             bGotMin, bGotMax;
   double          adfMinMax[2];
 
+  int nb(dataset->GetRasterCount());
+  string s(nb > 1 ? "s" : "");
+  string isare(nb > 1 ? "are" : "is");
+  Printf("There %s %d raster band%s in this data set.\n")(isare)(nb)(s);
   band = dataset->GetRasterBand(1);
   band->GetBlockSize(&nBlockXSize, &nBlockYSize);
   printf("Block=%dx%d Type=%s, ColorInterp=%s\n",
           nBlockXSize, nBlockYSize,
           GDALGetDataTypeName(band->GetRasterDataType()),
           GDALGetColorInterpretationName(
-            band->GetColorInterpretation()));
+            band->GetColorInterpretation())
+         );
 
   adfMinMax[0] = band->GetMinimum(&bGotMin);
   adfMinMax[1] = band->GetMaximum(&bGotMax);
   if (!(bGotMin && bGotMax))
     GDALComputeRasterMinMax((GDALRasterBandH)band, TRUE, adfMinMax);
 
-  printf("Min=%.3fd, Max=%.3f\n", adfMinMax[0], adfMinMax[1]);
+  printf("Min=%.3f, Max=%.3f\n", adfMinMax[0], adfMinMax[1]);
 
   if (band->GetOverviewCount() > 0)
     printf("Band has %d overviews.\n", band->GetOverviewCount());
@@ -169,6 +174,11 @@ main(int argc, char** argv)
   if (band->GetColorTable())
     printf("Band has a color table with %d entries.\n",
             band->GetColorTable()->GetColorEntryCount());
+
+  if (info) {
+    Printf("\nEarly exit for '--info' option.\n");
+    exit(0);
+  }
 
   // Reading Raster Data
   // -------------------
