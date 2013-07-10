@@ -1,0 +1,2 @@
+/usr/local/bin/sdtsdem2asc
+/usr/local/share/man/man1/sdtsdem2asc.1
