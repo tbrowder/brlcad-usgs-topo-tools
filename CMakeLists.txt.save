@@ -1,0 +1,76 @@
+# Project name is not mandatory, but you should use it
+project(sdts)
+set (sdts_VERSION_MAJOR 1)
+set (sdts_VERSION_MINOR 6)
+set (sdts_VERSION_PATCH 0)
+
+# States that CMake required version must be greater than 2.6
+cmake_minimum_required(VERSION 2.8.11.1)
+
+# policy settings
+cmake_policy(SET CMP0007 OLD) # ignore empty lists
+
+# verbose messages
+#set(CMAKE_VERBOSE_MAKEFILE ON)
+
+# Appends the cmake/modules path inside the MAKE_MODULE_PATH variable
+# which stores the directories of additional CMake modules
+# (ie. MacroOutOfSourceBuild.cmake):
+set(CMAKE_MODULE_PATH ${sdts_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH})
+# The macro below forces the build directory to be different from source directory:
+#include(MacroOutOfSourceBuild)
+
+#macro_ensure_out_of_source_build("${PROJECT_NAME} requires an out of source build.")
+
+# prereqs
+find_package(Boost REQUIRED
+  COMPONENTS system filesystem
+)
+if(Boost_FOUND)
+ include_directories(${Boost_INCLUDE_DIRS})
+else()
+  message(FATAL_ERROR
+    "FATAL ERROR: Required Boost libraries not found:\n"
+    "  libboost_system\n"
+    "  libboost_filesystem"
+  )
+endif()
+
+# stop some warnings
+add_definitions(-Wno-deprecated)
+
+# where to install?
+set(CMAKE_INSTALL_PREFIX "/usr/local")
+
+# need some defines and a config file
+include(${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
+include(${CMAKE_ROOT}/Modules/CheckIncludeFiles.cmake)
+
+check_function_exists(basename HAVE_BASENAME)
+check_include_files(float.h HAVE_FLOAT_H)
+configure_file(
+  "${PROJECT_SOURCE_DIR}/sdts++/sdts-config.h.in"
+  "${PROJECT_BINARY_DIR}/sdts++/sdts-config.h"
+)
+include_directories("${PROJECT_BINARY_DIR}")
+
+# need this because of way files in subdirs call headers, e.g.,:
+#include <sdts++/io/sio_8211Converter.h>
+include_directories(.)
+
+# all these have own install targets:
+#add_subdirectory(sysutils)
+add_subdirectory(sdts++)
+add_subdirectory(contrib)
+
+#add_subdirectory(doc)
+enable_testing() # adds a test target
+add_subdirectory(tests)
+
+# uninstall target (per CMake FAQ)
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
