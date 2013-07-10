@@ -11,3 +11,7 @@
 *.lai
 *.la
 *.a
+/build/
+/4055034.dem/
+/SDTSElevation.cc
+/data/
