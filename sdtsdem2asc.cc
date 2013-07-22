@@ -166,6 +166,16 @@ main(int argc, char** argv)
             band->GetColorInterpretation())
          );
 
+  int nx = band->GetXSize();
+  int ny = band->GetYSize();
+  if (nx != nBlockXSize) {
+    Printf("WARNING: nx = %d but nBlockXSize = %d\n")(nx)(nBlockXSize);
+  }
+  if (ny != nBlockYSize) {
+    Printf("WARNING: ny = %d but nBlockYSize = %d\n")(ny)(nBlockYSize);
+  }
+
+
   adfMinMax[0] = band->GetMinimum(&bGotMin);
   adfMinMax[1] = band->GetMaximum(&bGotMax);
   if (!(bGotMin && bGotMax))
@@ -198,10 +208,19 @@ main(int argc, char** argv)
   float* scanline;
   int    nXSize = band->GetXSize();
 
-  scanline = (float*) CPLMalloc(sizeof(float)*nXSize);
+  scanline = (float*)CPLMalloc(sizeof(float)*nXSize);
   band->RasterIO(GF_Read, 0, 0, nXSize, 1,
                  scanline, nXSize, 1, GDT_Float32,
                  0, 0);
+
+
+  // work all scanlines
+  for (int i = 0; i < ny; ++i) {
+    for (int j = 0; j < nx; ++j) {
+
+    }
+
+  }
 
   // The scanline buffer should be freed with CPLFree() when it is
   // no longer used.
