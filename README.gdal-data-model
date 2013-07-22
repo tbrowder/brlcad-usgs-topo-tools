@@ -295,27 +295,39 @@ one for green and one for blue.
 
 A raster band has the following properties:
 
-+ A width and height in pixels and lines. This is the same as that defined for the dataset, if this is a full resolution band.
++ A width and height in pixels and lines. This is the same as that
+  defined for the dataset, if this is a full resolution band.
 
-+ A datatype (GDALDataType). One of Byte, UInt16, Int16, UInt32, Int32, Float32, Float64, and the complex types CInt16, CInt32, CFloat32, and CFloat64.
++ A datatype (GDALDataType). One of Byte, UInt16, Int16, UInt32,
+  Int32, Float32, Float64, and the complex types CInt16, CInt32,
+  CFloat32, and CFloat64.
 
-+ A block size. This is a preferred (efficient) access chunk size. For tiled images this will be one tile. For scanline oriented images this will normally be one scanline.
++ A block size. This is a preferred (efficient) access chunk size. For
+  tiled images this will be one tile. For scanline oriented images
+  this will normally be one scanline.
 
-+ A list of name/value pair metadata in the same format as the dataset, but of information that is potentially specific to this band.
++ A list of name/value pair metadata in the same format as the
+  dataset, but of information that is potentially specific to this
+  band.
 
 + An optional description string.
 
-+ An optional single nodata pixel value (see also NODATA_VALUES metadata on the dataset for multi-band style nodata values).
++ An optional single nodata pixel value (see also NODATA_VALUES
+  metadata on the dataset for multi-band style nodata values).
 
-+ An optional nodata mask band marking pixels as nodata or in some cases transparency as discussed in RFC 15: Band Masks.
++ An optional nodata mask band marking pixels as nodata or in some
+  cases transparency as discussed in RFC 15: Band Masks.
 
-+ An optional list of category names (effectively class names in a thematic image).
++ An optional list of category names (effectively class names in a
+  thematic image).
 
 + An optional minimum and maximum value.
 
-+ An optional offset and scale for transforming raster values into meaning full values (ie translate height to meters)
++ An optional offset and scale for transforming raster values into
+  meaning full values (ie translate height to meters)
 
-+ An optional raster unit name. For instance, this might indicate linear units for elevation data.
++ An optional raster unit name. For instance, this might indicate
+  linear units for elevation data.
 
 + A color interpretation for the band. This is one of:
 
@@ -399,7 +411,5 @@ raster can be read at any resolution efficiently but with no distinct
 overview levels. This applies to some FFT encoded images, or images
 pulled through gateways (like OGDI) where downsampling can be done
 efficiently at the remote point.
-
-
 
 
