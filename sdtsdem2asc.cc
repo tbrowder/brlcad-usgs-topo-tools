@@ -209,18 +209,82 @@ main(int argc, char** argv)
   int    nXSize = band->GetXSize();
 
   scanline = (float*)CPLMalloc(sizeof(float)*nXSize);
-  band->RasterIO(GF_Read, 0, 0, nXSize, 1,
-                 scanline, nXSize, 1, GDT_Float32,
-                 0, 0);
-
+  band->RasterIO(GF_Read,     // Either GF_Read to read a region of
+                              // data, or GF_Write to write a region
+                              // of data.
+                 0,           // The pixel offset to the top left
+                              // corner of the region of the band to
+                              // be accessed. This would be zero to
+                              // start from the left side.
+                 0,           // The line offset to the top left
+                              // corner of the region of the band to
+                              // be accessed. This would be zero to
+                              // start from the top.
+                 nXSize,      // The width of the region of the band
+                              // to be accessed in pixels.
+                 1,           // The height of the region of the band
+                              // to be accessed in lines.
+                 scanline,    // The buffer into which the data should
+                              // be read, or from which it should be
+                              // written. This buffer must contain at
+                              // least nBufXSize * nBufYSize words of
+                              // type eBufType. It is organized in
+                              // left to right, top to bottom pixel
+                              // order. Spacing is controlled by the
+                              // nPixelSpace, and nLineSpace
+                              // parameters.
+                 nXSize,      // The width of the buffer image into
+                              // which the desired region is to be
+                              // read, or from which it is to be
+                              // written.
+                 1,           // The height of the buffer image into
+                              // which the desired region is to be
+                              // read, or from which it is to be
+                              // written.
+                 GDT_Float32, // The type of the pixel values in the
+                              // pData data buffer. The pixel values
+                              // will automatically be translated
+                              // to/from the GDALRasterBand data type
+                              // as needed.
+                 0,           // The byte offset from the start of one
+                              // pixel value in pData to the start of
+                              // the next pixel value within a
+                              // scanline. If defaulted (0) the size
+                              // of the datatype eBufType is used.
+                 0            // The byte offset from the start of one
+                              // scanline in pData to the start of the
+                              // next. If defaulted (0) the size of
+                              // the datatype eBufType * nBufXSize is
+                              // used.
+                 );
 
   // work all scanlines
   for (int i = 0; i < ny; ++i) {
+    // fill the scanline buffer
+    band->RasterIO(GF_Read,
+                   0,
+                   0,
+                   nXSize,
+                   1,
+                   scanline,
+                   nXSize,
+                   1,
+                   GDT_Float32,
+                   0,
+                   0
+                   );
+    // read the scanline
     for (int j = 0; j < nx; ++j) {
-
+      float p = scanline[j];
+      if (p < 0)
+        continue;
+      Printf("pixel[%d,%d] = %.1f\n")(j)(i)(p);
     }
 
   }
+
+  CPLFree(scanline);
+  GDALClose(dataset);
 
   // The scanline buffer should be freed with CPLFree() when it is
   // no longer used.
