@@ -1,0 +1,42 @@
+Introduction
+============
+
+This is the source directory for the 'brlcad-usgs-topo-tools' package
+which contains binary programs, Perl programs, and documents.
+
+Dependencies
+============
+
+CMake (at least version 2.8)
+-----
+  available from: <http://cmake.org/>
+
+libgdal
+----------
+  and its dependencies
+  available from: <http://gdal.org/>
+
+Building
+========
+
+Create a subdirectory named 'build'.  (Note there is a CMake macro
+installed with the package that should prevent you from building in
+any other location.)
+
+Change directory to the 'build' subdirectory (and execute:
+
+  $ cmake ..
+  $ make
+  $ sudo make install
+
+If you wish to remove the installed libary and headers, in the 'build'
+subdirectory execute:
+
+  $ sudo make uninstall
+
+Bugs
+====
+
+File bugs with the issue tracker.
+
+
