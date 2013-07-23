@@ -1,10 +1,15 @@
-sdtsdem2asc
-===========
+BRL-CAD USGS Topo Tools
+=======================
 
-Convert USGA topo data in various formats to an ASCII format for converting to a BRL-CAD DSP object.
+Tools to convert USGA topological (topo) elevation data in various formats to an ASCII format for converting to a BRL-CAD DSP object.
 
-Current converters are for:
+The BRL-CAD project is located at <brlcad.org>.
+ 
+Current converters are available or are under development for:
 
-  SDTS DEM
+* SDTS DEM
+* 
 
-Uses the GDAL/OGR library.
+The tools use the GDAL/OGR library which is available from <gdal.org>.
+
+The build system uses CMake available from <gmake.org>.
