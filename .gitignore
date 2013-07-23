@@ -2,6 +2,8 @@
 *.slo
 *.lo
 *.o
+*~
+Makefile
 
 # Compiled Dynamic libraries
 *.so
@@ -11,10 +13,9 @@
 *.lai
 *.la
 *.a
+
 /build/
 /4055034.dem/
 /SDTSElevation.cc
 /data/
-/*~
-/Makefile
 /makefile.clean
