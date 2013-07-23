@@ -13,4 +13,4 @@ The tools use the GDAL/OGR library which is available from <http://gdal.org/>.
 
 The build system uses CMake available from <http://gmake.org/>.
 
-USGS elevation data used for this project were obtained their Earth Explorer at <http://earthexplorer.usgs.gov/>.
+USGS elevation data used for this project were obtained their Earth Explorer at <http://earthexplorer.usgs.gov/>. (Note that registration is required to download data.  Registration is free.)
