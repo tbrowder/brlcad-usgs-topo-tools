@@ -8,8 +8,9 @@ The BRL-CAD project is located at <http://brlcad.org/>.
 Current converters are available or are under development for:
 
 * SDTS DEM
-* 
 
 The tools use the GDAL/OGR library which is available from <http://gdal.org/>.
 
-The build system uses CMake available from <gmake.org>.
+The build system uses CMake available from <http://gmake.org/>.
+
+USGS elevation data used for this project was obtained their Earth Explorer at <http://earthexplorer.usgs.gov/>.
