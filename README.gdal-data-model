@@ -412,4 +412,18 @@ overview levels. This applies to some FFT encoded images, or images
 pulled through gateways (like OGDI) where downsampling can be done
 efficiently at the remote point.
 
+CPLErr 
+GDALRasterBand::RasterIO(
+GDALRWFlag   eRWFlag,
+int          nXOff,
+int          nYOff,
+int 	     nXSize,
+int 	     nYSize,
+void* 	     pData,
+int          nBufXSize,
+int          nBufYSize,
+GDALDataType eBufType,
+int          nPixelSpace,
+int 	     nLineSpace	 
+)	
 
