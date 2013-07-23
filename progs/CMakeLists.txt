@@ -15,6 +15,6 @@ install(TARGETS sdtsdem2asc
 
 install(
   FILES
-    "${PROJECT_SOURCE_DIR}/sdtsdem2asc.1"
+    "${PROJECT_SOURCE_DIR}/progs/sdtsdem2asc.1"
   DESTINATION "share/man/man1"
 )
