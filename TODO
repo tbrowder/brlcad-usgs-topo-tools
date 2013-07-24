@@ -1,3 +1,5 @@
+Bring man page up to date
+
 Make CMake system check more robust:
 
   check all libc functions
