@@ -4,7 +4,7 @@ find_library(GDAL REQUIRED
   PATHS /usr/local/lib /usr/lib
 )
 if(GDAL)
- include_directories(${GDAL_INCLUDE_DIRS})
+  include_directories(${GDAL_INCLUDE_DIRS})
   message(
     "Required GDAL/OGR library was found."
   )
