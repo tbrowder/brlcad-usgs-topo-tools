@@ -7,12 +7,11 @@ The BRL-CAD project is located at <http://brlcad.org/>.
  
 Current converters are available or are under development for:
 
-* GMTED2010
 * SDTS DEM
 
 USGS elevation data used for this project were obtained from several sources:
 
-* GMTED2010: The USGS Earth Explorer at <http://earthexplorer.usgs.gov/>. Note that registration is required to download data (registration is free).
 * SDTS DEM: The Geo Community site at <http://data.geocomm.com/dem/demdownload.html/>. Note that you are required to have a Geo Community account for any downloads (membership is free).
+* Other formats: The USGS Earth Explorer at <http://earthexplorer.usgs.gov/>. Note that registration is required to download data (registration is free).
 
 See file 'INSTALL' for dependency, building, installation, and uninstallation instructions.
