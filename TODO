@@ -1,0 +1,12 @@
+Make CMake system check more robust:
+
+  check all libc functions
+
+Improve prog error checking
+
+Improve lighting model for output pix
+
+Investigate adding color to dsp
+
+Improve tutorial info
+
