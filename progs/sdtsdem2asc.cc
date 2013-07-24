@@ -22,13 +22,38 @@
 // GA_Update).
 
 #include <string>
+#include <cstdlib> // atoi
+#include <cstdio>
 
-#include "SafeFormat.h" // local library functions
+#include "SafeFormat.h"     // local library functions
 #include "gdal_priv.h"
-#include "cpl_conv.h"   // for CPLMalloc()
+#include "cpl_conv.h"       // for CPLMalloc()
+#include "ogr_spatialref.h"
 
 using namespace std;
 using namespace Loki;   // local library functions
+
+// local func decls
+void get_dataset_info();
+string get_spaces(const int);
+void show_node_and_children(const OGRSpatialReference* sp,
+                            const OGR_SRSNode* parent,
+                            const char* pname,
+                            const int level
+                            );
+
+// global vars
+OGRSpatialReference* sp(0);
+GDALDataset* dataset(0);
+bool info(false);
+bool debug(false);
+int scalex;
+int scaley;
+int scalez;
+double adfGeoTransform[6];
+int az(35);
+int el(25);
+int pixsize(512*3);
 
 int
 main(int argc, char** argv)
@@ -36,27 +61,69 @@ main(int argc, char** argv)
   if (argc < 2) {
     Printf("Usage: %s <SDTS CATD file> [...options...]\n"
            "\n"
+           "Without options, prints grid data in XY format to stdout and\n"
+           "  pixel data to stderr.\n"
+           "\n"
            "Options:\n"
            "\n"
-           "  --info   Provides information about the input file and exits.\n"
-           "  --debug  For developer use.\n"
+           "  --chop[=X]  Chop cell heights to a base level of X below the minimum\n"
+           "                height (default: 1).  Note that X must be >= 1.\n"
+           "  --name=X    Use 'X' as the base for output file names.  Outputs:\n"
+           "                X.asc\n"
+           "                X-reversed.asc\n"
+           "                X.dsp\n"
+           "                X.g (with X.r inside, az/el: %d/%d)\n"
+           "                X.pix (%dx%d)\n"
+           "                X-az35-el45.png\n"
+           "\n"
+           "  --info      Provides information about the input file and exits.\n"
+           "  --debug     For developer use: prints debug data to stdout\n"
            )
       (argv[0])
+      (az)(el)
+      (pixsize)(pixsize)
       ;
     exit(1);
   }
 
+  int chopel(1);
+  bool chop(false);
   string ifil;
-  bool info(false);
-  bool debug(false);
+  string basename;
   for (int i = 1; i < argc; ++i) {
     string arg(argv[i]);
+    string val;
+    string::size_type idx = arg.find('=');
+    if (idx != string::npos) {
+      string ab(arg);
+      val = arg.substr(idx+1);
+      arg.erase(idx);
+      // debug
+      if (0) {
+        Printf("DEBUG: arg before: '%s'\n")(ab);
+        Printf("       arg after:  '%s'\n")(arg);
+        Printf("       val:        '%s'\n")(val);
+      }
+    }
     if (arg[0] == '-') {
       if (arg.find("-i") != string::npos) {
         info = true;
       }
       else if (arg.find("-d") != string::npos) {
         debug = true;
+      }
+      else if (arg.find("-b") != string::npos) {
+        basename = val;
+      }
+      else if (arg.find("-c") != string::npos) {
+        chop = true;
+        if (!val.empty()) {
+          chopel = atoi(val.c_str());
+          if (chopel < 1) {
+            Printf("FATAL:  Chop elevation '%d' is less than 1.\n")(chopel);
+            exit(1);
+          }
+        }
       }
     }
     else if (ifil.empty()) {
@@ -68,70 +135,32 @@ main(int argc, char** argv)
       exit(1);
     }
   }
+
+  bool dofils(basename.empty() ? false : true);
+
   if (ifil.empty()) {
     Printf("ERROR:  No input file was entered...exiting.\n");
     exit(1);
   }
 
+  // debug
+  if (0) {
+    Printf("DEBUG: early exit.\n");
+    exit(1);
+  }
+
   GDALAllRegister();
-  GDALDataset* dataset
-    = (GDALDataset*)GDALOpen(ifil.c_str(), GA_ReadOnly);
+  dataset = static_cast<GDALDataset*>(GDALOpen(ifil.c_str(), GA_ReadOnly));
+  // Note that if GDALOpen() returns NULL it means the open failed,
+  // and that an error messages will already have been emitted via
+  // CPLError().
   if (!dataset) {
     Printf("ERROR:  Input file '%s' not found...exiting.\n")(ifil);
     exit(1);
   }
 
-  // Note that if GDALOpen() returns NULL it means the open failed,
-  // and that an error messages will already have been emitted via
-  // CPLError(). If you want to control how errors are reported to the
-  // user review the CPLError() documentation. Generally speaking all
-  // of GDAL uses CPLError() for error reporting. Also, note that
-  // pszFilename need not actually be the name of a physical file
-  // (though it usually is). It's interpretation is driver dependent,
-  // and it might be an URL, a filename with additional parameters
-  // added at the end controlling the open or almost anything. Please
-  // try not to limit GDAL file selection dialogs to only selecting
-  // physical files.
-  //
-  // Getting Dataset Information
-  // ---------------------------
-  //
-  // As described in the GDAL Data Model, a GDALDataset contains a
-  // list of raster bands, all pertaining to the same area, and having
-  // the same resolution. It also has metadata, a coordinate system, a
-  // georeferencing transform, size of raster and various other
-  // information.
+  get_dataset_info();
 
-  // adfGeoTransform[0] /* top left x */
-  // adfGeoTransform[1] /* w-e pixel resolution */
-  // adfGeoTransform[2] /* rotation, 0 if image is "north up" */
-  // adfGeoTransform[3] /* top left y */
-  // adfGeoTransform[4] /* rotation, 0 if image is "north up" */
-  // adfGeoTransform[5] /* n-s pixel resolution */
-
-  // If we wanted to print some general information about the dataset
-  // we might do the following:
-
-  double adfGeoTransform[6];
-
-  printf("Driver: %s/%s\n",
-          dataset->GetDriver()->GetDescription(),
-          dataset->GetDriver()->GetMetadataItem(GDAL_DMD_LONGNAME));
-
-  printf("Size is %dx%dx%d\n",
-         dataset->GetRasterXSize(), dataset->GetRasterYSize(),
-         dataset->GetRasterCount());
-
-  if (dataset->GetProjectionRef())
-    printf("Projection is '%s'\n", dataset->GetProjectionRef());
-
-  if (dataset->GetGeoTransform(adfGeoTransform) == CE_None) {
-    printf("Origin = (%.6f,%.6f)\n",
-           adfGeoTransform[0], adfGeoTransform[3]);
-
-    printf("Pixel Size = (%.6f,%.6f)\n",
-           adfGeoTransform[1], adfGeoTransform[5]);
-  }
 
   // Fetching a Raster Band
   // ----------------------
@@ -149,48 +178,86 @@ main(int argc, char** argv)
   double          adfMinMax[2];
 
   int nb(dataset->GetRasterCount());
-  string s(nb > 1 ? "s" : "");
-  string isare(nb > 1 ? "are" : "is");
-  Printf("There %s %d raster band%s in this data set.\n"
-         "Fetching data for band 1:\n"
-         )
-    (isare)(nb)(s)
-    ;
+
+  if (info) {
+    string s(nb > 1 ? "s" : "");
+    string isare(nb > 1 ? "are" : "is");
+
+    Printf("There %s %d raster band%s in this data set.\n"
+           "Fetching data for band 1:\n"
+           )
+      (isare)(nb)(s)
+      ;
+  }
 
   band = dataset->GetRasterBand(1);
   band->GetBlockSize(&nBlockXSize, &nBlockYSize);
-  printf("Block=%dx%d Type=%s, ColorInterp=%s\n",
-          nBlockXSize, nBlockYSize,
-          GDALGetDataTypeName(band->GetRasterDataType()),
-          GDALGetColorInterpretationName(
-            band->GetColorInterpretation())
-         );
+
+  int success;
+  double no_data_value = band->GetNoDataValue(&success);
 
   int nx = band->GetXSize();
   int ny = band->GetYSize();
-  if (nx != nBlockXSize) {
-    Printf("WARNING: nx = %d but nBlockXSize = %d\n")(nx)(nBlockXSize);
-  }
-  if (ny != nBlockYSize) {
-    Printf("WARNING: ny = %d but nBlockYSize = %d\n")(ny)(nBlockYSize);
+
+  string Stdout, Stderr;
+
+  FILE* fp1(0);
+  FILE* fp2(0);
+  vector<string> fils;
+  if (!basename.empty()) {
+    Stdout = basename + ".asc";
+    Stderr = basename + ".info";
+    fils.push_back(Stdout);
+    fils.push_back(Stderr);
+
+    fp1 = fopen(Stdout.c_str(), "w");
+    fp2 = fopen(Stderr.c_str(), "w");
   }
 
+  if (info) {
+    printf("Block=%dx%d Type=%s, ColorInterp=%s\n",
+           nBlockXSize, nBlockYSize,
+           GDALGetDataTypeName(band->GetRasterDataType()),
+           GDALGetColorInterpretationName(
+             band->GetColorInterpretation())
+           );
+  }
+  else {
+    if (dofils) {
+      fprintf(fp2, "pixels: %d wide X %d high; scale: %d m X %d m X %d m\n",
+              nx, ny, scalex, scaley, scalez);
+    }
+    else {
+      fprintf(stderr, "pixels: %d wide X %d high; scale: %d m X %d m X %d m\n",
+              nx, ny, scalex, scaley, scalez);
+    }
+  }
+
+  if (info) {
+    if (nx != nBlockXSize) {
+      Printf("WARNING: nx = %d but nBlockXSize = %d\n")(nx)(nBlockXSize);
+    }
+    if (ny != nBlockYSize) {
+      Printf("WARNING: ny = %d but nBlockYSize = %d\n")(ny)(nBlockYSize);
+    }
+  }
 
   adfMinMax[0] = band->GetMinimum(&bGotMin);
   adfMinMax[1] = band->GetMaximum(&bGotMax);
+
   if (!(bGotMin && bGotMax))
     GDALComputeRasterMinMax((GDALRasterBandH)band, TRUE, adfMinMax);
 
-  printf("Min=%.3f, Max=%.3f\n", adfMinMax[0], adfMinMax[1]);
-
-  if (band->GetOverviewCount() > 0)
-    printf("Band has %d overviews.\n", band->GetOverviewCount());
-
-  if (band->GetColorTable())
-    printf("Band has a color table with %d entries.\n",
-            band->GetColorTable()->GetColorEntryCount());
-
   if (info) {
+    printf("Min=%.3f, Max=%.3f\n", adfMinMax[0], adfMinMax[1]);
+
+    if (band->GetOverviewCount() > 0)
+      printf("Band has %d overviews.\n", band->GetOverviewCount());
+
+    if (band->GetColorTable())
+      printf("Band has a color table with %d entries.\n",
+             band->GetColorTable()->GetColorEntryCount());
+
     Printf("\nEarly exit for '--info' option.\n");
     exit(0);
   }
@@ -263,7 +330,7 @@ main(int argc, char** argv)
     // fill the scanline buffer
     band->RasterIO(GF_Read,
                    0,
-                   0,
+                   i, // the scanline number
                    nXSize,
                    1,
                    scanline,
@@ -275,16 +342,115 @@ main(int argc, char** argv)
                    );
     // read the scanline
     for (int j = 0; j < nx; ++j) {
-      float p = scanline[j];
-      if (p < 0)
-        continue;
-      Printf("pixel[%d,%d] = %.1f\n")(j)(i)(p);
-    }
+      int p = static_cast<int>(scanline[j]);
 
+      if (chop) {
+        // adjust elevation
+        p -= static_cast<int>(floor(adfMinMax[0])) + chopel;
+
+      }
+      // debug
+      if (debug) {
+        if (p < 0)
+          continue;
+        Printf("pixel[%d,%d] = %d\n")(j)(i)(p);
+      }
+      else {
+        // print a "pixel"
+        if (p < 0)
+          p = 0;
+        if (dofils)
+          fprintf(fp1, " %d", p);
+        else
+          printf(" %d", p);
+      }
+    }
+    if (dofils) {
+      fprintf(fp1, "\n");
+    }
+    else {
+      printf("\n");
+    }
   }
 
   CPLFree(scanline);
   GDALClose(dataset);
+  if (fp1)
+    fclose(fp1);
+  if (fp2)
+    fclose(fp2);
+
+  // now do the mged trick
+  if (dofils) {
+    string rfil(basename + "-reversed.asc");
+    string dfil(basename + ".dsp");
+    fils.push_back(rfil);
+    fils.push_back(dfil);
+
+    string cmd;
+    SPrintf(cmd, "tac %s > %s")(Stdout)(rfil);
+    system(cmd.c_str());
+
+    cmd.clear();
+    SPrintf(cmd, "asc2dsp %s %s")(rfil)(dfil);
+    system(cmd.c_str());
+
+    string mfil(basename + ".mged");
+    fils.push_back(mfil);
+
+    FILE* fp = fopen(mfil.c_str(), "w");
+    string solid(basename + ".s");
+    string region(basename + ".r");
+    FPrintf(fp,
+            "units m\n"
+            "in %s dsp f %s %d %d 0 ad %d 1\n"
+            "r %s u %s\n"
+            )
+      (solid)(dfil)(nx)(ny)(scalex)
+      (region)(solid)
+      ;
+    fclose(fp);
+
+    // run the mged script
+    string gfil(basename + ".g");
+    fils.push_back(gfil);
+    cmd.clear();
+    unlink(gfil.c_str());
+    SPrintf(cmd, "mged -c %s < '%s'")(gfil)(mfil);
+    system(cmd.c_str());
+
+    // create the images
+    string pixfil;
+    SPrintf(pixfil, "%s-az%d-el%d.pix")(basename)(az)(el);
+    fils.push_back(pixfil);
+    string pngfil;
+    SPrintf(pngfil, "%s-az%d-el%d.png")(basename)(az)(el);
+    fils.push_back(pngfil);
+
+    unlink(pixfil.c_str());
+    unlink(pngfil.c_str());
+
+    cmd.clear();
+    SPrintf(cmd, "rt -R -o %s -s%d -a%d -e%d %s %s 1>/dev/null 2>/dev/null")
+      (pixfil)(pixsize)(az)(el)(gfil)(region)
+      ;
+    system(cmd.c_str());
+
+    cmd.clear();
+    SPrintf(cmd, "pix-png -s%d %s > %s")
+      (pixsize)(pixfil)(pngfil)
+      ;
+    system(cmd.c_str());
+
+  }
+  if (dofils && !fils.empty()) {
+    unsigned nf = fils.size();
+    string s(nf > 1 ? "s" : "");
+    Printf("Normal end.  See file%s:\n")(s);
+    for (unsigned i = 0; i < nf; ++i) {
+      Printf("  %s\n")(fils[i]);
+    }
+  }
 
   // The scanline buffer should be freed with CPLFree() when it is
   // no longer used.
@@ -343,4 +509,194 @@ main(int argc, char** argv)
   // format like GTiff will likely result in being unable to open it
   // afterwards.
 
-}
+} // main
+
+void
+get_dataset_info()
+{
+  // Getting Dataset Information
+  // ---------------------------
+  //
+  // As described in the GDAL Data Model, a GDALDataset contains a
+  // list of raster bands, all pertaining to the same area, and having
+  // the same resolution. It also has metadata, a coordinate system, a
+  // georeferencing transform, size of raster and various other
+  // information.
+
+  // adfGeoTransform[0] /* top left x */
+  // adfGeoTransform[1] /* w-e pixel resolution */
+  // adfGeoTransform[2] /* rotation, 0 if image is "north up" */
+  // adfGeoTransform[3] /* top left y */
+  // adfGeoTransform[4] /* rotation, 0 if image is "north up" */
+  // adfGeoTransform[5] /* n-s pixel resolution */
+
+  // If we wanted to print some general information about the dataset
+  // we might do the following:
+
+  if (dataset->GetGeoTransform(adfGeoTransform) == CE_None) {
+    if (info) {
+      printf("Origin = (%.6f,%.6f)\n",
+             adfGeoTransform[0], adfGeoTransform[3]);
+
+      printf("Pixel Size = (%.6f,%.6f)\n",
+             adfGeoTransform[1], adfGeoTransform[5]);
+    }
+  }
+
+  scalex = static_cast<int>(floor(adfGeoTransform[1]));
+  scaley = static_cast<int>(floor(adfGeoTransform[5]));
+  // use negative of scaley since we reverse the output
+  scaley *= -1;
+
+  if (!info && (scalex != scaley)) {
+    Printf("FATAL: cell scale x (%d) != cell scale y (%d)\n")(scalex)(scaley);
+    exit(1);
+  }
+  scalez = 1;
+
+  // check scalez
+  if (dataset->GetProjectionRef()) {
+    const char* s = dataset->GetProjectionRef();
+    if (!sp)
+      sp = new OGRSpatialReference(s);
+    const OGR_SRSNode* node = sp->GetAttrNode("UNIT");
+    string unit(sp->GetAttrValue("UNIT", 0));
+    if (unit != "Meter") {
+      Printf("FATAL:  Cell unit is '%s' instead of 'Meter'.\n")(unit);
+      exit(1);
+    }
+    else {
+      int val = atoi(sp->GetAttrValue("UNIT", 1));
+      if (val != 1) {
+        Printf("FATAL:  Cell z scale is '%d' instead of '1'.\n")(val);
+        exit(1);
+      }
+    }
+  }
+
+  if (info) {
+    char** flist2 = dataset->GetFileList();
+    CPLStringList flist(flist2, false);
+    int nf = flist.size();
+    if (nf) {
+      printf("Data set files:\n");
+      for (int i = 0; i < nf; ++i) {
+        const CPLString& s = flist[i];
+        printf("  %s\n", s.c_str());
+      }
+    }
+    CSLDestroy(flist2);
+
+    char** dlist2 = dataset->GetMetadata();
+    CPLStringList dlist(dlist2, false);
+    int nd = dlist.size();
+    if (nd) {
+      printf("Dataset Metadata:\n");
+      for (int i = 0; i < nd; ++i) {
+        const CPLString& s = dlist[i];
+        printf("  %s\n", s.c_str());
+      }
+    }
+
+    GDALDriver* driver = dataset->GetDriver();
+
+    char** mlist2 = driver->GetMetadata();
+    CPLStringList mlist(mlist2, false);
+    int nm = mlist.size();
+    if (nm) {
+      printf("Driver Metadata:\n");
+      for (int i = 0; i < nm; ++i) {
+        const CPLString& s = mlist[i];
+        printf("  %s\n", s.c_str());
+      }
+    }
+
+    printf("Driver: %s/%s\n",
+           driver->GetDescription(),
+           driver->GetMetadataItem(GDAL_DMD_LONGNAME));
+
+    printf("Size is %dx%dx%d\n",
+           dataset->GetRasterXSize(), dataset->GetRasterYSize(),
+           dataset->GetRasterCount());
+
+    if (dataset->GetProjectionRef()) {
+      const char* s = dataset->GetProjectionRef();
+      if (!sp)
+        sp = new OGRSpatialReference(s);
+
+      vector<string> nodes;
+      nodes.push_back("PROJCS");
+      nodes.push_back("GEOGCS");
+      nodes.push_back("DATUM");
+      nodes.push_back("SPHEROID");
+      nodes.push_back("PROJECTION");
+
+      printf("Projection is:\n");
+
+      for (unsigned i = 0; i < nodes.size(); ++i) {
+        const char* name = nodes[i].c_str();
+        const OGR_SRSNode* node = sp->GetAttrNode(name);
+        if (!node) {
+          printf("  %s (NULL)\n", name);
+          continue;
+        }
+        int level = 0;
+        show_node_and_children(sp, node, name, level); // recursive
+      }
+
+      /*
+      const char* projcs   = sp.GetAttrNode("PROJCS");
+
+      const char* geogcs   = sp.GetAttrValue("GEOGCS");
+      const char* datum    = sp.GetAttrValue("DATUM");
+      const char* spheroid = sp.GetAttrValue("SPHEROID");
+      const char* project  = sp.GetAttrValue("PROJECTION");
+
+      printf("  %s\n", projcs);
+      printf("  %s\n", geogcs);
+      printf("  %s\n", datum);
+      printf("  %s\n", spheroid);
+      printf("  %s\n", project);
+
+      */
+      //printf("Projection is '%s'\n", dataset->GetProjectionRef());
+    }
+
+  }
+
+} // get_dataset_info
+
+string
+get_spaces(const int n)
+{
+  string s("");
+  for (int i = 0; i < n; ++i)
+    s += "  ";
+  return s;
+} // get_spaces
+
+void
+show_node_and_children(const OGRSpatialReference* sp,
+                       const OGR_SRSNode* parent,
+                       const char* pname,
+                       const int level
+                       )
+{
+  string spaces = get_spaces(level);
+  int nc = parent->GetChildCount();
+  printf("  %s%s [%d children]:\n",
+         spaces.c_str(),
+         pname, nc);
+  for (int j = 0; j < nc; ++j) {
+    const char* cname = sp->GetAttrValue(pname, j);
+    // the child may be a  parent
+    const OGR_SRSNode* cnode = sp->GetAttrNode(cname);
+    if (cnode) {
+      show_node_and_children(sp, cnode, cname, level+1);
+    }
+    else {
+      printf("    %d: '%s'\n", j, cname);
+    }
+  }
+
+} // show_node_and_children
