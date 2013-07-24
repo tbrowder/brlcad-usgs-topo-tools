@@ -14,6 +14,7 @@ macro_ensure_out_of_source_build()
 
 # prerequsites
 include(cmake/gdal-library-prereq.cmake)
+include(cmake/brlcad-library-prereq.cmake)
 
 # where to install?
 set(CMAKE_INSTALL_PREFIX "/usr/local")
