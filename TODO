@@ -1,8 +1,11 @@
 Make CMake system check more robust:
 
   check all libc functions
+  check for BRL-CAD progs used
 
 Improve prog error checking
+
+Clean up prog (refactor, etc.)
 
 Improve lighting model for output pix
 
