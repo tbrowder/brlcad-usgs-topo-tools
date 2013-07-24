@@ -16,6 +16,11 @@ libgdal
   and its dependencies
   available from: <http://gdal.org/>
 
+BRL-CAD
+-------
+  and its dependencies
+  available from: <http://brlcad.org/>
+
 Building
 ========
 
