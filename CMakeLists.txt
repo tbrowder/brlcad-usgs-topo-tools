@@ -12,6 +12,15 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH})
 include(MacroEnsureOutOfSourceBuild)
 macro_ensure_out_of_source_build()
 
+# needed system functions
+# need some defines and a config file
+include(CheckFunctionExists)
+include(CheckIncludeFiles)
+
+check_function_exists(atoi HAVE_ATOI)
+check_function_exists(system HAVE_SYSTEM)
+check_function_exists(unlink HAVE_UNLINK)
+
 # prerequsites
 include(cmake/gdal-library-prereq.cmake)
 include(cmake/brlcad-library-prereq.cmake)
