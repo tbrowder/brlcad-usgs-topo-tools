@@ -34,6 +34,7 @@ using namespace std;
 using namespace Loki;   // local library functions
 
 // local func decls
+void error_exit(const string& msg);
 void get_dataset_info();
 string get_spaces(const int);
 void show_node_and_children(const OGRSpatialReference* sp,
@@ -700,3 +701,10 @@ show_node_and_children(const OGRSpatialReference* sp,
   }
 
 } // show_node_and_children
+
+void
+error_exit(const string& msg)
+{
+  Printf("FATAL: %s\n")(msg);
+  exit(1);
+} // error_exit
