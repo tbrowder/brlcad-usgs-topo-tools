@@ -8,16 +8,24 @@ sdtsdem2asc \- translate USGS SDTS/DEM files into ASCII format for a BRL-CAD DSP
 .SH DESCRIPTION
 .I  sdtsdem2asc
 translates a USGS SDTS/DEM file into an ASCII format suitable for
-converting to a BRL-CAD DSP file.  The output is dumped to stdout.
-Note the output should be redirected into a file named, say,
-\'mydem-normal.asc\'.  That file, in turn, needs to be reversed by
-executing \'tac mydem-normal.asc > mydem-reversed.asc\'.
+converting to a BRL-CAD DSP file.  Run the program with option '--help'
+for details.
 
 Then create the dsp file: \'asc2dsp mydem-reversed.asc mydem.dsp\'.
+
+.SH DEPENDENCIES
 
 Note the program requires the GDAL/OGR library available here:
 
 http://gdal.org/index.html
+
+and the BRL-CAD package available here:
+
+http://brlcad.org
+
+It also requires CMake to build.  CMake is available here:
+
+http://cmake.org
 
 .SH BUGS
 Send bug reports to the author.
